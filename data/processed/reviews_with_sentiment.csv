@@ -1,0 +1,6 @@
+review_id,product_id,user_id,rating,review_text,sentiment,sentiment_score
+r001,p001,u101,5,Very comfortable and breathable. Great for workouts and daily use.,POSITIVE,0.999881386756897
+r002,p001,u102,4,Looks stylish and fits well. Cushioning is good for running.,POSITIVE,0.999817430973053
+r003,p002,u103,5,Excellent grip and durable quality for hiking trails.,POSITIVE,0.9998446702957153
+r004,p003,u104,4,Soft material and easy to wear all day.,POSITIVE,0.9981997013092041
+r005,p004,u105,5,Great support during training sessions and very stable.,POSITIVE,0.9998711347579956

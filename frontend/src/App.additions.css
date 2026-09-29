@@ -1,0 +1,176 @@
+/* =========================================================
+   RECOMAI DARK THEME TEST
+========================================================= */
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  background: #eaeded !important;
+}
+
+
+/* NAVBAR / HEADER */
+
+header,
+.navbar,
+.top-navbar,
+nav {
+  background: #131921 !important;
+  color: #ffffff !important;
+}
+
+
+/* LINKS */
+
+header a,
+.navbar a,
+.top-navbar a,
+nav a {
+  color: #ffffff !important;
+}
+
+
+/* SEARCH */
+
+.search-input-wrapper {
+  background: #ffffff !important;
+  border: 2px solid #ff9900 !important;
+}
+
+.search-button {
+  background: #ff9900 !important;
+  color: #111111 !important;
+}
+
+
+/* AI SECTIONS */
+
+.ai-section {
+  background: #eaeded !important;
+}
+
+.ai-section.alt {
+  background: #dfe2e5 !important;
+}
+
+
+/* VISUAL DISCOVERY */
+
+.visual-discovery {
+  background: #172236 !important;
+  color: white !important;
+}
+
+.visual-discovery h2,
+.visual-discovery h3 {
+  color: white !important;
+}
+
+
+/* AI CAPABILITIES */
+
+.ai-capabilities {
+  background: #111820 !important;
+  color: white !important;
+}
+
+.ai-capability-card {
+  background: #1d2735 !important;
+  border: 1px solid #3b4758 !important;
+}
+
+.ai-capability-card h3 {
+  color: white !important;
+}
+
+.ai-capability-card p {
+  color: #b7c0cc !important;
+}
+
+
+/* PIPELINE */
+
+.ai-pipeline {
+  background:
+    linear-gradient(
+      135deg,
+      #0b1118,
+      #18263b
+    ) !important;
+
+  color: white !important;
+}
+
+
+/* MULTIMODAL */
+
+.multimodal-banner {
+  background:
+    linear-gradient(
+      135deg,
+      #111820,
+      #253852
+    ) !important;
+
+  color: white !important;
+}
+
+
+/* STATISTICS */
+
+.ai-stats-strip {
+  background: #131921 !important;
+}
+
+.ai-stat strong {
+  color: #ff9900 !important;
+}
+
+.ai-stat span {
+  color: #ffffff !important;
+}
+
+
+/* PRODUCT AREA */
+
+.ai-gallery {
+  background: #eaeded !important;
+}
+
+
+/* PRODUCT CARDS */
+
+.product-card {
+  background: #ffffff !important;
+  border-color: #d5d9d9 !important;
+}
+
+
+/* PRICE */
+
+.product-price {
+  color: #b12704 !important;
+}
+
+
+/* RATING */
+
+.rating-star {
+  color: #e47911 !important;
+}
+
+
+/* AI MATCH */
+
+.similarity-fill {
+  background:
+    linear-gradient(
+      90deg,
+      #ff9900,
+      #e47911
+    ) !important;
+}

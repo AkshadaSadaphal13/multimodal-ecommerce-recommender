@@ -1,0 +1,8 @@
+user_id,product_id,interaction_type,score
+u101,p001,view,0.92
+u101,p003,view,0.75
+u102,p001,purchase,1.00
+u102,p004,view,0.82
+u103,p002,purchase,1.00
+u104,p003,purchase,1.00
+u105,p004,view,0.88
