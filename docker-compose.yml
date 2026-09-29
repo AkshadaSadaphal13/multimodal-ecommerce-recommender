@@ -1,0 +1,40 @@
+services:
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+
+    container_name: multimodal-backend
+
+    ports:
+      - "8000:8000"
+
+    volumes:
+      - ./data/processed:/app/data/processed:ro
+      - ./data/embeddings:/app/data/embeddings:ro
+      - ./index:/app/index:ro
+      - ./models:/app/models:ro
+
+    environment:
+      PYTHONUNBUFFERED: "1"
+
+    restart: unless-stopped
+
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: http://localhost:8000
+
+    container_name: multimodal-frontend
+
+    ports:
+      - "5173:80"
+
+    depends_on:
+      - backend
+
+    restart: unless-stopped
