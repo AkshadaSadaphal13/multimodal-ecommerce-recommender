@@ -7,13 +7,14 @@ function ProductGrid({
   onWishlist,
   onAddToBag,
   onViewDetails,
+  className = "",
 }) {
   if (!products.length) {
     return null;
   }
 
   return (
-    <div className="product-grid">
+    <div className={`product-grid ${className}`}>
 
       {products.map(
         (product, index) => (

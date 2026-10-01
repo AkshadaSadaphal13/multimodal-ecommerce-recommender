@@ -2,7 +2,6 @@ from pathlib import Path
 import ast
 import io
 import math
-import re
 
 import faiss
 import numpy as np
@@ -46,10 +45,6 @@ class RetrievalService:
             / "embeddings"
             / "three_modal_product_ids.csv"
         )
-        self.text_index_path = project_root / "index" / "text_product_index.faiss"
-        self.text_product_ids_path = project_root / "data" / "embeddings" / "text_product_ids.csv"
-        self.image_index_path = project_root / "index" / "image_product_index.faiss"
-        self.image_product_ids_path = project_root / "data" / "embeddings" / "image_product_ids.csv"
 
         self.products_path = (
             project_root
@@ -147,17 +142,6 @@ class RetrievalService:
             .astype(str)
             .str.strip()
         )
-
-        self.text_index = faiss.read_index(str(self.text_index_path))
-        self.text_product_ids = pd.read_csv(self.text_product_ids_path)
-        self.text_product_ids["product_id"] = self.text_product_ids["product_id"].astype(str).str.strip()
-        self.image_index = faiss.read_index(str(self.image_index_path))
-        self.image_product_ids = pd.read_csv(self.image_product_ids_path)
-        self.image_product_ids["product_id"] = self.image_product_ids["product_id"].astype(str).str.strip()
-
-        for name, index, ids in (("text", self.text_index, self.text_product_ids), ("image", self.image_index, self.image_product_ids), ("three-modal", self.index, self.product_ids)):
-            if index.ntotal != len(ids):
-                raise ValueError(f"{name} FAISS index has {index.ntotal} vectors but {len(ids)} product IDs")
 
         print(
             "Product IDs:",
@@ -563,10 +547,10 @@ class RetrievalService:
     # ========================================================
 
     @staticmethod
-    def extract_image_urls(images):
+    def extract_image_url(images):
 
         if images is None:
-            return []
+            return ""
 
         # ----------------------------------------------------
         # Handle NaN
@@ -575,7 +559,7 @@ class RetrievalService:
         try:
 
             if pd.isna(images):
-                return []
+                return ""
 
         except Exception:
             pass
@@ -589,7 +573,7 @@ class RetrievalService:
             text = images.strip()
 
             if not text:
-                return []
+                return ""
 
             if (
                 text.startswith("http://")
@@ -597,7 +581,7 @@ class RetrievalService:
                 text.startswith("https://")
             ):
 
-                return [text]
+                return text
 
             # Try parsing string representation
             try:
@@ -606,11 +590,16 @@ class RetrievalService:
                     text
                 )
 
-                return RetrievalService.extract_image_urls(parsed)
+                return (
+                    RetrievalService
+                    .extract_image_url(
+                        parsed
+                    )
+                )
 
             except Exception:
 
-                return []
+                return ""
 
         # ----------------------------------------------------
         # Dictionary
@@ -619,22 +608,29 @@ class RetrievalService:
         if isinstance(images, dict):
 
             # Prefer highest quality image
-            urls = []
             for key in [
                 "hi_res",
                 "large",
-                "medium",
                 "thumb",
-                "url",
             ]:
+
                 value = images.get(
                     key
                 )
-                urls.extend(RetrievalService.extract_image_urls(value))
-            for key, value in images.items():
-                if key not in {"hi_res", "large", "medium", "thumb", "url"}:
-                    urls.extend(RetrievalService.extract_image_urls(value))
-            return list(dict.fromkeys(urls))
+
+                if (
+                    isinstance(value, str)
+                    and
+                    (
+                        value.startswith("http://")
+                        or
+                        value.startswith("https://")
+                    )
+                ):
+
+                    return value
+
+            return ""
 
         # ----------------------------------------------------
         # List
@@ -642,25 +638,19 @@ class RetrievalService:
 
         if isinstance(images, list):
 
-            urls = []
             for item in images:
 
                 result = (
                     RetrievalService
-                    .extract_image_urls(
+                    .extract_image_url(
                         item
                     )
                 )
-                urls.extend(result)
-            return list(dict.fromkeys(urls))
 
-        return []
+                if result:
+                    return result
 
-    @staticmethod
-    def extract_image_url(images):
-        """Return the preferred image for legacy call sites."""
-        urls = RetrievalService.extract_image_urls(images)
-        return urls[0] if urls else ""
+        return ""
 
 
     # ========================================================
@@ -710,13 +700,6 @@ class RetrievalService:
         )
 
         return embedding
-
-    def encode_text_raw(self, query):
-        """Encode text in the same 384D space as the text product index."""
-        query = str(query).strip()
-        if not query:
-            return None
-        return self.model.encode([query], convert_to_numpy=True, normalize_embeddings=True).astype(np.float32)
 
 
     # ========================================================
@@ -880,11 +863,12 @@ class RetrievalService:
         top_k,
         category=None,
         min_rating=None,
-        max_price=None,
-        index=None
+        max_price=None
     ):
 
-        total_vectors = (index if index is not None else self.index).ntotal
+        total_vectors = (
+            self.index.ntotal
+        )
 
         # Search everything when filters are active.
         if (
@@ -917,29 +901,22 @@ class RetrievalService:
         category=None,
         min_rating=None,
         max_price=None,
-        search_mode="multimodal",
-        index=None,
-        product_ids=None
+        search_mode="multimodal"
     ):
-
-        index = index if index is not None else self.index
-        product_ids = product_ids if product_ids is not None else self.product_ids
 
         search_k = self.get_search_k(
             top_k=top_k,
             category=category,
             min_rating=min_rating,
-            max_price=max_price,
-            index=index
+            max_price=max_price
         )
 
         # ----------------------------------------------------
         # FAISS
         # ----------------------------------------------------
 
-        search_k = min(search_k, index.ntotal)
         distances, indices = (
-            index.search(
+            self.index.search(
                 query_embedding,
                 search_k
             )
@@ -951,17 +928,17 @@ class RetrievalService:
 
         results = []
 
-        for score, faiss_position in zip(
+        for score, index in zip(
             distances[0],
             indices[0]
         ):
 
             # Invalid index
-            if faiss_position < 0:
+            if index < 0:
                 continue
 
-            if faiss_position >= len(
-                product_ids
+            if index >= len(
+                self.product_ids
             ):
                 continue
 
@@ -970,8 +947,8 @@ class RetrievalService:
             # ------------------------------------------------
 
             product_id = (
-                product_ids
-                .iloc[faiss_position]
+                self.product_ids
+                .iloc[index]
                 ["product_id"]
             )
 
@@ -1092,9 +1069,6 @@ class RetrievalService:
             # IMAGE
             # =================================================
 
-            image_urls = self.extract_image_urls(product.get("images"))
-            image_urls.extend(self.extract_image_urls(product.get("image_url")))
-            image_urls = list(dict.fromkeys(image_urls))
             image_url = (
                 self.extract_image_url(
                     product.get(
@@ -1303,12 +1277,6 @@ class RetrievalService:
                 "image_url":
                     image_url,
 
-                "image_urls":
-                    image_urls,
-
-                "images":
-                    image_urls,
-
                 # --------------------------------------------
                 # Review information
                 # --------------------------------------------
@@ -1388,32 +1356,23 @@ class RetrievalService:
         if not query:
             return []
 
-        query_embedding = self.encode_text_raw(query)
+        query_embedding = (
+            self.encode_text(
+                query
+            )
+        )
 
         if query_embedding is None:
             return []
 
-        candidates = self.search_embedding(
+        return self.search_embedding(
             query_embedding=query_embedding,
-            top_k=min(max(top_k * 5, 30), self.text_index.ntotal),
+            top_k=top_k,
             category=category,
             min_rating=min_rating,
             max_price=max_price,
             search_mode="text"
-            ,index=self.text_index,
-            product_ids=self.text_product_ids
         )
-        terms = [term for term in re.findall(r"[a-z0-9]+", query.lower()) if len(term) > 1]
-        for product in candidates:
-            title = re.sub(r"[^a-z0-9]+", " ", product.get("title", "").lower())
-            matched = sum(term in title for term in terms)
-            lexical = matched / max(len(terms), 1)
-            # Preserve semantic similarity while rewarding direct title matches.
-            product["_rank_score"] = 0.75 * float(product.get("similarity") or 0) + 0.25 * lexical
-        candidates.sort(key=lambda product: product["_rank_score"], reverse=True)
-        for product in candidates:
-            product.pop("_rank_score", None)
-        return candidates[:top_k]
 
 
     # ========================================================
@@ -1441,9 +1400,7 @@ class RetrievalService:
             category=category,
             min_rating=min_rating,
             max_price=max_price,
-            search_mode="image",
-            index=self.image_index,
-            product_ids=self.image_product_ids
+            search_mode="image"
         )
 
 

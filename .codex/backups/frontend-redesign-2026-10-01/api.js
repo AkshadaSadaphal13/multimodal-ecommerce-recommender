@@ -293,9 +293,9 @@ export async function getMultimodalRecommendations(
 // PRODUCTS
 // ============================================================
 
-export async function getProducts(limit = 2500) {
+export async function getProducts() {
   const response = await fetch(
-    `${API_BASE_URL}/api/products/?limit=${encodeURIComponent(limit)}`
+    `${API_BASE_URL}/api/products`
   );
 
   if (!response.ok) {
@@ -400,8 +400,7 @@ export async function recordUserHistory(
   userId,
   productId,
   eventType,
-  query = null,
-  eventId = null
+  query = null
 ) {
   const response = await fetch(
     `${API_BASE_URL}/api/users/${userId}/history`,
@@ -419,9 +418,6 @@ export async function recordUserHistory(
 
         event_type:
           eventType,
-
-        event_id:
-          eventId,
 
         query,
       }),
@@ -495,14 +491,10 @@ export async function getUserProfile(
 
 export async function getPersonalizedRecommendations(
   userId,
-  topK = 10,
-  context = {}
+  topK = 10
 ) {
-  const params = new URLSearchParams({ top_k: String(topK) });
-  if (context.query) params.set("query", context.query);
-  if (context.category) params.set("category", context.category);
   const response = await fetch(
-    `${API_BASE_URL}/api/users/${userId}/recommendations?${params.toString()}`
+    `${API_BASE_URL}/api/users/${userId}/recommendations?top_k=${topK}`
   );
 
   if (!response.ok) {

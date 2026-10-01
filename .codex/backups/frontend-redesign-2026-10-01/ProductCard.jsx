@@ -43,8 +43,9 @@ function ProductCard({
     product?.similarity || 0
   );
 
-  const rating = Number(product?.rating ?? product?.average_rating ?? 0);
-  const brand = product?.brand || product?.store || "";
+  const rating = Number(
+    product?.rating || 0
+  );
 
   const price =
     product?.price !== null &&
@@ -52,10 +53,10 @@ function ProductCard({
     product?.price !== ""
       ? Number(product.price)
       : null;
-  const originalPrice = Number(product?.original_price ?? product?.list_price ?? product?.mrp ?? 0);
-  const discountPercent = Number(product?.discount_percentage ?? (originalPrice > (price || 0) && price > 0 ? Math.round((1 - price / originalPrice) * 100) : 0));
 
-  const reviewCount = Number(product?.review_count ?? product?.rating_number ?? 0);
+  const reviewCount = Number(
+    product?.review_count || 0
+  );
 
   const positivePercentage = Number(
     product?.positive_review_percentage || 0
@@ -204,9 +205,14 @@ function ProductCard({
             }
           />
         ) : (
-          <div className="image-placeholder product-art-fallback">
-            <span className="fallback-mark">{(brand || product?.title || "F").trim().slice(0, 1).toUpperCase()}</span>
-            <small>{product?.category || product?.main_category || "A GOOD FIND"}</small>
+          <div className="image-placeholder">
+            <span>
+              🛍
+            </span>
+
+            <small>
+              Image unavailable
+            </small>
           </div>
         )}
 
@@ -236,9 +242,9 @@ function ProductCard({
 
         {/* BRAND */}
 
-        {brand && (
+        {product?.brand && (
           <div className="product-brand">
-            {brand}
+            {product.brand}
           </div>
         )}
 
@@ -312,9 +318,6 @@ function ProductCard({
           <div className="product-price">
             {formattedPrice}
           </div>
-          {discountPercent > 0 && (
-            <div className="discount-detail">{originalPrice > 0 && <del>{`₹${originalPrice.toLocaleString("en-IN")}`}</del>}<span>{discountPercent}% OFF</span></div>
-          )}
 
         </div>
 

@@ -1,0 +1,9 @@
+model,k,precision,recall,ndcg,hit_rate,status
+text_only,5,,,,,Recommendation metrics not computed: interactions join 0/4 product IDs; review rows identify 2496 catalog items but do not define query relevance. Reviews alone are not valid retrieval ground truth.
+text_only,10,,,,,Recommendation metrics not computed: interactions join 0/4 product IDs; review rows identify 2496 catalog items but do not define query relevance. Reviews alone are not valid retrieval ground truth.
+image_only,5,,,,,Recommendation metrics not computed: interactions join 0/4 product IDs; review rows identify 2496 catalog items but do not define query relevance. Reviews alone are not valid retrieval ground truth.
+image_only,10,,,,,Recommendation metrics not computed: interactions join 0/4 product IDs; review rows identify 2496 catalog items but do not define query relevance. Reviews alone are not valid retrieval ground truth.
+text_image,5,,,,,Recommendation metrics not computed: interactions join 0/4 product IDs; review rows identify 2496 catalog items but do not define query relevance. Reviews alone are not valid retrieval ground truth.
+text_image,10,,,,,Recommendation metrics not computed: interactions join 0/4 product IDs; review rows identify 2496 catalog items but do not define query relevance. Reviews alone are not valid retrieval ground truth.
+text_image_review,5,,,,,Recommendation metrics not computed: interactions join 0/4 product IDs; review rows identify 2496 catalog items but do not define query relevance. Reviews alone are not valid retrieval ground truth.
+text_image_review,10,,,,,Recommendation metrics not computed: interactions join 0/4 product IDs; review rows identify 2496 catalog items but do not define query relevance. Reviews alone are not valid retrieval ground truth.

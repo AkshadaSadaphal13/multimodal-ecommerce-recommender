@@ -7,18 +7,17 @@ import {
 import "./App.css";
 import "./App.additions.css";
 import "./App.theme.css";
-import "./App.myntra.css";
 import SearchBar from "./components/SearchBar";
 import ProductGrid from "./components/ProductGrid";
-import PersonalizedRecommendations from "./components/PersonalizedRecommendations";
 
 import {
   getRecommendations,
   getImageRecommendations,
   getMultimodalRecommendations,
-  getProducts,
+  createUser,
+  recordUserHistory,
+  getPersonalizedRecommendations,
 } from "./services/api";
-import { trackActivity } from "./services/userHistory";
 
 
 /* =========================================================
@@ -26,22 +25,40 @@ import { trackActivity } from "./services/userHistory";
 ========================================================= */
 
 function getImageUrl(product) {
-  return getProductImageUrls(product)[0] || null;
-}
+  if (!product) return null;
 
-function getProductImageUrls(product) {
-  const collect = (value) => {
-    if (!value) return [];
-    if (typeof value === "string") {
-      const text = value.trim();
-      if (/^https?:\/\//i.test(text)) return [text];
-      try { return collect(JSON.parse(text)); } catch { return []; }
+  if (
+    product.image_url &&
+    typeof product.image_url === "string"
+  ) {
+    return product.image_url;
+  }
+
+  if (
+    typeof product.images === "string"
+  ) {
+    return product.images;
+  }
+
+  if (Array.isArray(product.images)) {
+    const first = product.images[0];
+
+    if (typeof first === "string") {
+      return first;
     }
-    if (Array.isArray(value)) return value.flatMap(collect);
-    if (typeof value === "object") return ["hi_res", "large", "medium", "thumb", "url"].flatMap((key) => collect(value[key]));
-    return [];
-  };
-  return [...new Set([collect(product?.image_url), collect(product?.image_urls), collect(product?.images)].flat())];
+
+    if (first && typeof first === "object") {
+      return (
+        first.large ||
+        first.medium ||
+        first.thumb ||
+        first.url ||
+        null
+      );
+    }
+  }
+
+  return null;
 }
 
 
@@ -111,15 +128,9 @@ function App() {
 
   const [query, setQuery] =
     useState("black running shoes");
-  const [lastSearchQuery, setLastSearchQuery] = useState("");
 
   const [products, setProducts] =
     useState([]);
-
-  const [catalog, setCatalog] = useState([]);
-  const [catalogLoading, setCatalogLoading] = useState(true);
-  const [catalogLimit, setCatalogLimit] = useState(12);
-  const [activityVersion, setActivityVersion] = useState(0);
 
   const [loading, setLoading] =
     useState(false);
@@ -157,9 +168,6 @@ function App() {
   const [maximumPrice, setMaximumPrice] =
     useState("");
 
-  const [selectedCategory, setSelectedCategory] = useState("");
-  const [selectedBrand, setSelectedBrand] = useState("");
-
   const [sortBy, setSortBy] =
     useState("recommendation");
 
@@ -176,12 +184,6 @@ function App() {
 
   const [selectedProduct, setSelectedProduct] =
     useState(null);
-  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
-
-  const [recentlyViewed, setRecentlyViewed] = useState(() => {
-    try { return JSON.parse(localStorage.getItem("recomai_recently_viewed") || "[]"); }
-    catch { return []; }
-  });
 
 
   /* =======================================================
@@ -245,6 +247,7 @@ function App() {
         return null;
       }
     });
+    
 
 
   /* =======================================================
@@ -336,23 +339,13 @@ function App() {
     );
   }, [bag]);
 
-  useEffect(() => {
-    let alive = true;
-    getProducts(2500)
-      .then((data) => { if (alive) setCatalog(Array.isArray(data.products) ? data.products : []); })
-      .catch(() => { if (alive) setCatalog([]); })
-      .finally(() => { if (alive) setCatalogLoading(false); });
-    return () => { alive = false; };
-  }, []);
-
 
   /* =======================================================
      SEARCH
   ======================================================= */
 
   const handleSearch = async (
-    searchQuery = query,
-    searchOptions = {}
+    searchQuery = query
   ) => {
 
     if (
@@ -363,9 +356,6 @@ function App() {
     }
 
     setQuery(searchQuery);
-    setLastSearchQuery(searchQuery);
-    void trackActivity({ type: "search", query: searchQuery, category: searchOptions.category ?? selectedCategory })
-      .then(() => setActivityVersion((version) => version + 1));
 
     setLoading(true);
 
@@ -383,7 +373,6 @@ function App() {
           selectedImage,
           topK,
           {
-            category: searchOptions.category ?? selectedCategory,
             minRating: minimumRating > 0 ? minimumRating : "",
             maxPrice: maximumPrice,
           },
@@ -395,7 +384,6 @@ function App() {
           selectedImage,
           topK,
           {
-            category: searchOptions.category ?? selectedCategory,
             minRating: minimumRating > 0 ? minimumRating : "",
             maxPrice: maximumPrice,
           }
@@ -405,7 +393,6 @@ function App() {
           searchQuery,
           topK,
           {
-            category: searchOptions.category ?? selectedCategory,
             minRating: minimumRating > 0 ? minimumRating : "",
             maxPrice: maximumPrice,
           }
@@ -479,10 +466,6 @@ function App() {
     category
   ) => {
 
-    const realCategory = catalog.some((item) => item.main_category === category);
-    setSelectedCategory(realCategory ? category : "");
-    setSelectedBrand("");
-
     const categoryQueries = {
 
       "All Beauty":
@@ -504,31 +487,13 @@ function App() {
 
     handleSearch(
       categoryQueries[category] ||
-      category,
-      { category: realCategory ? category : "" }
+      category
     );
 
     window.scrollTo({
       top: 0,
       behavior: "smooth",
     });
-  };
-
-  const handleDepartmentSearch = (department) => {
-    const searches = {
-      Men: "men clothing shoes",
-      Women: "women fashion sandals",
-      Kids: "kids games toys",
-      Beauty: "beauty skincare products",
-      Accessories: "accessories gift cards",
-      Gadgets: "wireless headphones gaming controller",
-      Sale: "gift cards popular products",
-    };
-    setSelectedCategory("");
-    setSelectedBrand("");
-    if (department === "Sale") setSortBy("price-low");
-    handleSearch(searches[department] || department, { category: "" });
-    document.getElementById("recommendations")?.scrollIntoView({ behavior: "smooth" });
   };
 
 
@@ -552,18 +517,10 @@ function App() {
             (product) =>
               product.rating !== null &&
               product.rating !== undefined &&
-              Number(product.rating ?? product.average_rating ?? 0) >=
+              Number(product.rating) >=
                 Number(minimumRating)
           );
 
-      }
-
-      if (selectedCategory) {
-        result = result.filter((product) => (product.category || product.main_category) === selectedCategory);
-      }
-
-      if (selectedBrand) {
-        result = result.filter((product) => (product.brand || product.store || "") === selectedBrand);
       }
 
 
@@ -691,33 +648,8 @@ function App() {
       products,
       minimumRating,
       maximumPrice,
-      selectedCategory,
-      selectedBrand,
       sortBy,
     ]);
-
-  const availableCategories = useMemo(() => [...new Set(catalog.map((item) => item.main_category).filter(Boolean))].sort(), [catalog]);
-  const availableBrands = useMemo(() => [...new Set(catalog.map((item) => item.store).filter(Boolean))].sort(), [catalog]);
-  const catalogProducts = useMemo(() => {
-    let result = [...catalog];
-    if (selectedCategory) result = result.filter((item) => item.main_category === selectedCategory);
-    if (selectedBrand) result = result.filter((item) => item.store === selectedBrand);
-    if (minimumRating > 0) result = result.filter((item) => Number(item.average_rating || 0) >= minimumRating);
-    if (maximumPrice !== "") result = result.filter((item) => getProductPrice(item) !== null && getProductPrice(item) <= Number(maximumPrice));
-    if (sortBy === "rating") result.sort((a, b) => Number(b.average_rating || 0) - Number(a.average_rating || 0));
-    if (sortBy === "price-low") result.sort((a, b) => (getProductPrice(a) ?? Infinity) - (getProductPrice(b) ?? Infinity));
-    if (sortBy === "price-high") result.sort((a, b) => (getProductPrice(b) ?? -Infinity) - (getProductPrice(a) ?? -Infinity));
-    return result;
-  }, [catalog, selectedCategory, selectedBrand, minimumRating, maximumPrice, sortBy]);
-  const relatedProducts = useMemo(() => {
-    if (!selectedProduct) return [];
-    const selectedCategoryName = selectedProduct.category || selectedProduct.main_category;
-    const resultMatches = products.filter((item) => item.product_id !== selectedProduct.product_id && (item.category || item.main_category) === selectedCategoryName);
-    const selectedFromResults = products.some((item) => item.product_id === selectedProduct.product_id);
-    const source = selectedFromResults && resultMatches.length ? resultMatches : catalog.filter((item) => item.product_id !== selectedProduct.product_id && item.main_category === selectedCategoryName);
-    return source.slice(0, 4);
-  }, [selectedProduct, products, catalog]);
-  const relatedAreAI = Boolean(selectedProduct && products.some((item) => item.product_id === selectedProduct.product_id) && relatedProducts.some((item) => products.some((result) => result.product_id === item.product_id)));
 
 
   /* =======================================================
@@ -729,8 +661,6 @@ function App() {
     setMinimumRating(0);
 
     setMaximumPrice("");
-    setSelectedCategory("");
-    setSelectedBrand("");
 
     setSortBy(
       "recommendation"
@@ -747,9 +677,6 @@ function App() {
   const handleWishlist = (
     product
   ) => {
-    const isCurrentlyWishlisted = wishlist.some((item) => item.product_id === product.product_id);
-    void trackActivity({ type: isCurrentlyWishlisted ? "wishlist_remove" : "wishlist", product })
-      .then(() => setActivityVersion((version) => version + 1));
 
     setWishlist(
       (current) => {
@@ -800,8 +727,6 @@ function App() {
   const handleAddToBag = (
     product
   ) => {
-    void trackActivity({ type: "cart", product })
-      .then(() => setActivityVersion((version) => version + 1));
 
     setBag(
       (current) => {
@@ -865,11 +790,6 @@ function App() {
   const handleRemoveFromBag = (
     productId
   ) => {
-    const removedProduct = bag.find((item) => item.product_id === productId);
-    if (removedProduct) {
-      void trackActivity({ type: "cart_remove", product: removedProduct })
-        .then(() => setActivityVersion((version) => version + 1));
-    }
 
     setBag(
       (current) => {
@@ -900,11 +820,6 @@ function App() {
     productId,
     change
   ) => {
-    const changedProduct = bag.find((item) => item.product_id === productId);
-    if (changedProduct) {
-      void trackActivity({ type: change > 0 ? "cart" : "cart_remove", product: changedProduct })
-        .then(() => setActivityVersion((version) => version + 1));
-    }
 
     setBag(
       (current) => {
@@ -1064,13 +979,10 @@ function App() {
   const handleViewDetails = (
     product
   ) => {
-    void trackActivity({ type: "view", product })
-      .then(() => setActivityVersion((version) => version + 1));
-    const updated = [product, ...recentlyViewed.filter((item) => item.product_id !== product.product_id)].slice(0, 12);
-    setRecentlyViewed(updated);
-    localStorage.setItem("recomai_recently_viewed", JSON.stringify(updated));
-    setSelectedImageIndex(0);
-    setSelectedProduct(product);
+
+    setSelectedProduct(
+      product
+    );
   };
 
 
@@ -1207,11 +1119,6 @@ function App() {
 
     };
 
-    bag.forEach((item) => {
-      void trackActivity({ type: "purchase", product: item })
-        .then(() => setActivityVersion((version) => version + 1));
-    });
-
 
     const updatedOrders = [
       newOrder,
@@ -1307,8 +1214,6 @@ function App() {
 
     <div className="app">
 
-      <div className="store-announcement">STYLE THAT FEELS LIKE YOU <span>•</span> Discovery powered by your taste</div>
-
 
       {/* =====================================================
           NAVBAR
@@ -1339,9 +1244,54 @@ function App() {
 
 
         <div className="navbar-links">
-          {["Men", "Women", "Kids", "Beauty", "Accessories", "Gadgets", "Sale"].map((department) => (
-            <button key={department} className={department === "Sale" ? "nav-sale" : ""} onClick={() => handleDepartmentSearch(department)}>{department}</button>
-          ))}
+
+          <button
+            onClick={() =>
+              document
+                .getElementById(
+                  "recommendations"
+                )
+                ?.scrollIntoView({
+                  behavior:
+                    "smooth",
+                })
+            }
+          >
+            RECOMMENDATIONS
+          </button>
+
+
+          <button
+            onClick={() =>
+              document
+                .getElementById(
+                  "categories"
+                )
+                ?.scrollIntoView({
+                  behavior:
+                    "smooth",
+                })
+            }
+          >
+            CATEGORIES
+          </button>
+
+
+          <button
+            onClick={() =>
+              document
+                .getElementById(
+                  "how-ai-works"
+                )
+                ?.scrollIntoView({
+                  behavior:
+                    "smooth",
+                })
+            }
+          >
+            HOW AI WORKS
+          </button>
+
         </div>
 
 
@@ -1461,15 +1411,6 @@ function App() {
           </button>
 
 
-          <button className="nav-action nav-quick-link" onClick={openOrders} title="Orders">
-            <span>▤</span><small>Orders</small>
-          </button>
-
-          <button className="nav-action nav-quick-link" onClick={() => setActivePanel("recent")} title="Recently viewed">
-            <span>◷</span><small>Recent</small>
-          </button>
-
-
         </div>
 
       </nav>
@@ -1489,19 +1430,19 @@ function App() {
 
               <span className="live-dot"></span>
 
-              YOUR PERSONAL STYLE EDIT
+              AI RECOMMENDATIONS
 
             </div>
 
 
             <h1>
 
-              Style that
+              Shopping
 
               <br />
 
               <span>
-                finds you.
+                made intelligent.
               </span>
 
             </h1>
@@ -1509,7 +1450,10 @@ function App() {
 
             <p className="hero-subtitle">
 
-              Discover feel-good finds across beauty, gaming, wellness and more. Search in your own words or bring a photo — our AI does the matching.
+              Search naturally and let
+              AI rank products using
+              semantic similarity and
+              multimodal signals.
 
             </p>
 
@@ -1556,11 +1500,11 @@ function App() {
 
               <div>
                 <strong>
-                  {catalog.length ? catalog.length.toLocaleString("en-IN") : "2,499"}
+                  2496+
                 </strong>
 
                 <span>
-                  REAL PRODUCTS
+                  PRODUCTS
                 </span>
               </div>
 
@@ -1582,7 +1526,7 @@ function App() {
                 </strong>
 
                 <span>
-                  PICK YOUR VIBE
+                  FAST RETRIEVAL
                 </span>
               </div>
 
@@ -1778,21 +1722,51 @@ function App() {
         <div className="category-grid">
 
 
-          {(availableCategories.length ? availableCategories : ["All Beauty", "Digital Music", "Gift Cards", "Health & Personal Care", "Video Games"]).map(
+          {[
+            [
+              "All Beauty",
+              "✦",
+              "beauty",
+            ],
+
+            [
+              "Digital Music",
+              "♪",
+              "music",
+            ],
+
+            [
+              "Video Games",
+              "◈",
+              "games",
+            ],
+
+            [
+              "Health & Care",
+              "♡",
+              "health",
+            ],
+
+            [
+              "Gift Cards",
+              "◇",
+              "gifts",
+            ],
+          ].map(
             (category, index) => (
 
               <button
-                key={category}
-                className={`category-card category-${index % 5}`}
+                key={category[0]}
+                className={`category-card ${category[2]}`}
                 onClick={() =>
                   handleCategorySearch(
-                    category
+                    category[0]
                   )
                 }
               >
 
                 <div className="category-icon">
-                  {String(index + 1).padStart(2, "0")}
+                  {category[1]}
                 </div>
 
                 <small>
@@ -1803,7 +1777,7 @@ function App() {
                 </small>
 
                 <strong>
-                  {category}
+                  {category[0]}
                 </strong>
 
                 <p>
@@ -1821,58 +1795,6 @@ function App() {
 
         </div>
 
-      </section>
-
-
-      {/* =====================================================
-          PERSONALIZED DISCOVERY
-      ===================================================== */}
-
-      <PersonalizedRecommendations
-        activityVersion={activityVersion}
-        query={lastSearchQuery}
-        category={selectedCategory}
-        catalog={catalog}
-        catalogLoading={catalogLoading}
-        wishlist={wishlist}
-        bag={bag}
-        onWishlist={handleWishlist}
-        onAddToBag={handleAddToBag}
-        onViewDetails={handleViewDetails}
-      />
-
-
-      {/* =====================================================
-          FULL CATALOG EDIT
-      ===================================================== */}
-
-      <section className="catalog-edit-section" id="catalog-edit">
-        <div className="catalog-edit-heading">
-          <div>
-            <span className="section-label">THE RECOMAI EDIT</span>
-            <h2>Good things, found.</h2>
-            <p>{catalogLoading ? "Loading products from your catalog…" : `${catalog.length.toLocaleString("en-IN")} products from your collection`}</p>
-          </div>
-          <div className="catalog-filter-row">
-            <select aria-label="Filter catalog by category" value={selectedCategory} onChange={(event) => setSelectedCategory(event.target.value)}>
-              <option value="">All categories</option>
-              {availableCategories.map((category) => <option key={category} value={category}>{category}</option>)}
-            </select>
-            <select aria-label="Filter catalog by brand" value={selectedBrand} onChange={(event) => setSelectedBrand(event.target.value)}>
-              <option value="">All brands</option>
-              {availableBrands.slice(0, 100).map((brand) => <option key={brand} value={brand}>{brand}</option>)}
-            </select>
-            <select aria-label="Sort products" value={sortBy} onChange={(event) => setSortBy(event.target.value)}>
-              <option value="recommendation">Featured</option><option value="rating">Top rated</option><option value="price-low">Price: low to high</option><option value="price-high">Price: high to low</option>
-            </select>
-          </div>
-        </div>
-        {catalogProducts.length ? (
-          <>
-            <ProductGrid products={catalogProducts.slice(0, catalogLimit)} wishlist={wishlist} bag={bag} onWishlist={handleWishlist} onAddToBag={handleAddToBag} onViewDetails={handleViewDetails} className="catalog-product-grid" />
-            {catalogProducts.length > catalogLimit && <button className="load-more-products" onClick={() => setCatalogLimit((limit) => limit + 12)}>LOAD MORE FINDS</button>}
-          </>
-        ) : !catalogLoading && <div className="catalog-empty">Start the FastAPI backend to load products from your local catalog.</div>}
       </section>
 
 
@@ -2144,26 +2066,6 @@ function App() {
 
                   <div className="filter-item">
 
-                    <label>Category</label>
-                    <select value={selectedCategory} onChange={(event) => setSelectedCategory(event.target.value)}>
-                      <option value="">All categories</option>
-                      {availableCategories.map((category) => <option key={category} value={category}>{category}</option>)}
-                    </select>
-
-                  </div>
-
-                  <div className="filter-item">
-
-                    <label>Brand</label>
-                    <select value={selectedBrand} onChange={(event) => setSelectedBrand(event.target.value)}>
-                      <option value="">All brands</option>
-                      {[...new Set(products.map((product) => product.brand || product.store).filter(Boolean))].sort().map((brand) => <option key={brand} value={brand}>{brand}</option>)}
-                    </select>
-
-                  </div>
-
-                  <div className="filter-item">
-
                     <label>
                       Minimum Rating
                     </label>
@@ -2353,13 +2255,6 @@ function App() {
             {/* =================================================
                 PROFILE
             ================================================= */}
-
-            {activePanel === "recent" && (
-              <>
-                <div className="panel-header"><div><span className="panel-kicker">YOUR BROWSING HISTORY</span><h2>Recently viewed</h2></div><button onClick={() => setActivePanel(null)}>×</button></div>
-                {recentlyViewed.length ? <ProductGrid products={recentlyViewed} wishlist={wishlist} bag={bag} onWishlist={handleWishlist} onAddToBag={handleAddToBag} onViewDetails={handleViewDetails} className="recently-viewed-grid" /> : <div className="panel-empty"><div className="empty-icon">◷</div><h3>Nothing here just yet</h3><p>Open a product to find it again here.</p></div>}
-              </>
-            )}
 
             {activePanel ===
               "profile" && (
@@ -3545,28 +3440,23 @@ function App() {
 
             <div className="product-modal-image">
 
-              {getProductImageUrls(selectedProduct)[selectedImageIndex] ? (
+              {getImageUrl(
+                selectedProduct
+              ) ? (
 
                 <img
-                  src={getProductImageUrls(selectedProduct)[selectedImageIndex]}
+                  src={getImageUrl(
+                    selectedProduct
+                  )}
                   alt={
                     selectedProduct.title
                   }
-                  onError={() => setSelectedImageIndex((current) => current + 1)}
                 />
 
               ) : (
                 <span>
                   🛍
                 </span>
-              )}
-
-              {getProductImageUrls(selectedProduct).length > 1 && (
-                <div className="product-gallery-controls">
-                  <button type="button" disabled={selectedImageIndex <= 0} onClick={() => setSelectedImageIndex((current) => current - 1)}>Previous</button>
-                  <span>{Math.min(selectedImageIndex + 1, getProductImageUrls(selectedProduct).length)} / {getProductImageUrls(selectedProduct).length}</span>
-                  <button type="button" disabled={selectedImageIndex >= getProductImageUrls(selectedProduct).length - 1} onClick={() => setSelectedImageIndex((current) => current + 1)}>Next</button>
-                </div>
               )}
 
             </div>
@@ -3744,24 +3634,6 @@ function App() {
 
               </div>
 
-
-              {relatedProducts.length > 0 && (
-                <div className="modal-related">
-                  <strong>{relatedAreAI ? "AI PICKS FOR YOU" : "MORE FROM THIS CATEGORY"}</strong>
-                  <div className="modal-related-products">
-                    {relatedProducts.map((item) => (
-                      <button key={item.product_id} onClick={() => handleViewDetails(item)}>
-                        <div className="modal-related-image">
-                          {getImageUrl(item) ? <img src={getImageUrl(item)} alt="" onError={(event) => { event.currentTarget.style.display = "none"; event.currentTarget.parentElement.querySelector(".related-image-fallback").style.display = "grid"; }} /> : null}
-                          <span className="related-image-fallback" style={{ display: getImageUrl(item) ? "none" : "grid" }}>{(item.brand || item.store || item.title || "F").slice(0, 1)}</span>
-                        </div>
-                        <span>{item.title}</span>
-                        <b>{formatPrice(item.price)}</b>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
 
               <div className="modal-actions">
 

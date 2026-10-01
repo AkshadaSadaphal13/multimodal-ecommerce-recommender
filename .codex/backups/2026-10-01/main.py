@@ -1,10 +1,9 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from .database import init_db
-from .routes import users
-from .routes.recommendations import router as recommendations_router
-from .routes.products import router as products_router
+from app.database import init_db
+from app.routes import users
+from app.routes.recommendations import router as recommendations_router
 
 
 # ---------------------------------------------------------
@@ -55,8 +54,6 @@ def startup_event():
 app.include_router(
     recommendations_router
 )
-app.include_router(products_router)
-app.include_router(products_router, prefix="/api")
 
 # User, preferences and history APIs
 app.include_router(

@@ -1,0 +1,2 @@
+n,accuracy,precision,recall,f1,label_method
+7026,0.8737546256760603,0.9854340648669645,0.8620455317703024,0.9196193928409606,"weak proxy: rating >=4 positive, <=2 negative; 3-star excluded"

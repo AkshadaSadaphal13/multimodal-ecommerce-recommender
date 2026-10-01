@@ -1,5 +1,3 @@
-import { useState } from "react";
-
 function ProductCard({
   product,
   wishlist = [],
@@ -7,32 +5,41 @@ function ProductCard({
   onAddToBag,
   onViewDetails,
 }) {
-  const [imageIndex, setImageIndex] = useState(0);
   /* =====================================================
      IMAGE
   ===================================================== */
 
-  const getImageUrls = (value) => {
-    if (!value) return [];
-    if (typeof value === "string") {
-      const trimmed = value.trim();
-      if (/^https?:\/\//i.test(trimmed)) return [trimmed];
-      try { return getImageUrls(JSON.parse(trimmed)); } catch {
-        try { return getImageUrls(trimmed.replace(/'/g, '"') && JSON.parse(trimmed.replace(/'/g, '"'))); } catch { return []; }
+  const getImageUrl = () => {
+    if (product?.image_url) {
+      return product.image_url;
+    }
+
+    if (typeof product?.images === "string") {
+      return product.images;
+    }
+
+    if (Array.isArray(product?.images)) {
+      const first = product.images[0];
+
+      if (typeof first === "string") {
+        return first;
+      }
+
+      if (first && typeof first === "object") {
+        return (
+          first.large ||
+          first.medium ||
+          first.thumb ||
+          first.url ||
+          null
+        );
       }
     }
-    if (Array.isArray(value)) return value.flatMap(getImageUrls);
-    if (typeof value === "object") {
-      return ["hi_res", "large", "medium", "thumb", "url"].flatMap((key) => getImageUrls(value[key]));
-    }
-    return [];
+
+    return null;
   };
-  const imageUrls = [...new Set([
-    ...getImageUrls(product?.image_url),
-    ...getImageUrls(product?.image_urls),
-    ...getImageUrls(product?.images),
-  ])];
-  const imageUrl = imageUrls[imageIndex];
+
+  const imageUrl = getImageUrl();
 
 
   /* =====================================================
@@ -43,8 +50,9 @@ function ProductCard({
     product?.similarity || 0
   );
 
-  const rating = Number(product?.rating ?? product?.average_rating ?? 0);
-  const brand = product?.brand || product?.store || "";
+  const rating = Number(
+    product?.rating || 0
+  );
 
   const price =
     product?.price !== null &&
@@ -52,10 +60,10 @@ function ProductCard({
     product?.price !== ""
       ? Number(product.price)
       : null;
-  const originalPrice = Number(product?.original_price ?? product?.list_price ?? product?.mrp ?? 0);
-  const discountPercent = Number(product?.discount_percentage ?? (originalPrice > (price || 0) && price > 0 ? Math.round((1 - price / originalPrice) * 100) : 0));
 
-  const reviewCount = Number(product?.review_count ?? product?.rating_number ?? 0);
+  const reviewCount = Number(
+    product?.review_count || 0
+  );
 
   const positivePercentage = Number(
     product?.positive_review_percentage || 0
@@ -138,7 +146,21 @@ function ProductCard({
      IMAGE ERROR
   ===================================================== */
 
-  const handleImageError = () => setImageIndex((current) => current + 1);
+  const handleImageError = (
+    event
+  ) => {
+    event.currentTarget.style.display =
+      "none";
+
+    const parent =
+      event.currentTarget.parentElement;
+
+    if (parent) {
+      parent.classList.add(
+        "image-load-error"
+      );
+    }
+  };
 
 
   /* =====================================================
@@ -204,9 +226,14 @@ function ProductCard({
             }
           />
         ) : (
-          <div className="image-placeholder product-art-fallback">
-            <span className="fallback-mark">{(brand || product?.title || "F").trim().slice(0, 1).toUpperCase()}</span>
-            <small>{product?.category || product?.main_category || "A GOOD FIND"}</small>
+          <div className="image-placeholder">
+            <span>
+              🛍
+            </span>
+
+            <small>
+              Image unavailable
+            </small>
           </div>
         )}
 
@@ -236,9 +263,9 @@ function ProductCard({
 
         {/* BRAND */}
 
-        {brand && (
+        {product?.brand && (
           <div className="product-brand">
-            {brand}
+            {product.brand}
           </div>
         )}
 
@@ -312,9 +339,6 @@ function ProductCard({
           <div className="product-price">
             {formattedPrice}
           </div>
-          {discountPercent > 0 && (
-            <div className="discount-detail">{originalPrice > 0 && <del>{`₹${originalPrice.toLocaleString("en-IN")}`}</del>}<span>{discountPercent}% OFF</span></div>
-          )}
 
         </div>
 
