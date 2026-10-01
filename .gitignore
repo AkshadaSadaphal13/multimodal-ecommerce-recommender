@@ -1,118 +1,104 @@
-# =========================================================
-# PYTHON
-# =========================================================
-
-.venv/
-venv/
-env/
+# =========================
+# Python
+# =========================
 __pycache__/
 *.py[cod]
 *.pyo
-*.pyd
 
+# Virtual environments
+.venv/
+venv/
+env/
+
+# =========================
+# Environment / Secrets
+# =========================
+.env
+.env.local
+.env.*.local
+
+# =========================
+# IDE
+# =========================
+.vscode/
+.idea/
+
+# =========================
+# Node / React
+# =========================
+frontend/node_modules/
+frontend/dist/
+
+# =========================
+# Python cache / testing
+# =========================
 .pytest_cache/
 .mypy_cache/
 .coverage
+htmlcov/
 
-
-# =========================================================
-# SECRETS / ENVIRONMENT
-# =========================================================
-
-.env
-.env.*
-!.env.example
-
-
-# =========================================================
-# JUPYTER
-# =========================================================
-
+# =========================
+# Jupyter
+# =========================
 .ipynb_checkpoints/
 
-
-# =========================================================
-# NODE / REACT
-# =========================================================
-
-frontend/node_modules/
-frontend/dist/
-frontend/.vite/
-
-npm-debug.log*
-yarn-debug.log*
-pnpm-debug.log*
-
-
-# =========================================================
-# DATASETS
-# =========================================================
-
-data/raw/
-data/images/
-
-# Large processed datasets
-data/processed/*.parquet
-
-# Keep small CSV files only if desired
-# data/processed/*.csv
-
-
-# =========================================================
-# LARGE ML FILES
-# =========================================================
-
-*.npy
-*.npz
-*.pt
-*.pth
-*.bin
-*.safetensors
-*.onnx
-*.joblib
-*.pkl
-
-
-# =========================================================
-# FAISS INDEXES
-# =========================================================
-
-*.faiss
-
-data/embeddings/
-data/index/
-index/
-
-
-# =========================================================
-# LOGS
-# =========================================================
-
+# =========================
+# Logs
+# =========================
 *.log
 
-
-# =========================================================
+# =========================
 # OS
-# =========================================================
-
+# =========================
 .DS_Store
 Thumbs.db
-desktop.ini
 
-
-# =========================================================
-# IDE
-# =========================================================
-
-.vscode/
-.idea/
-*.code-workspace
-
-
-# =========================================================
-# TEMPORARY FILES
-# =========================================================
-
+# =========================
+# Temporary files
+# =========================
 *.tmp
 *.temp
-*.bak
+
+# =========================
+# Raw / downloaded datasets
+# =========================
+data/raw/
+data/downloads/
+
+# =========================
+# IMPORTANT
+# =========================
+# ML runtime artifacts are intentionally
+# NOT ignored because the application needs them.
+
+# data/embeddings/
+# index/
+# *.npy
+# *.faiss
+
+# =========================
+# Local runtime data
+# =========================
+data/user_history.db
+
+# =========================
+# Codex backups
+# =========================
+.codex/backups/
+
+# =========================
+# Old duplicate embedding directory
+# =========================
+embeddings/
+
+# =========================
+# Old / backup FAISS files
+# =========================
+index/.gitkeep
+index/multimodal_product_index.faiss
+index/product_index.faiss
+index/products.faiss
+index/text_product_index_backup.faiss
+
+# Old embedding backup
+data/embeddings/text_product_ids_backup.csv
