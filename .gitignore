@@ -102,3 +102,6 @@ index/text_product_index_backup.faiss
 
 # Old embedding backup
 data/embeddings/text_product_ids_backup.csv
+
+# Codex
+.codex/
