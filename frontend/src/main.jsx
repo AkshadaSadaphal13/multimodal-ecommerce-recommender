@@ -6,6 +6,7 @@ import App from "./App";
 import "./index.css";
 import "./App.css";
 import "./App.additions.css";
+import "./App.polish.css";
 
 ReactDOM.createRoot(
   document.getElementById("root")

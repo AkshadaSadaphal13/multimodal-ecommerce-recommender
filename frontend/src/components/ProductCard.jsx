@@ -2,12 +2,13 @@ import { useState } from "react";
 
 function ProductCard({
   product,
+  preferredImageIndex = 0,
   wishlist = [],
   onWishlist,
   onAddToBag,
   onViewDetails,
 }) {
-  const [imageIndex, setImageIndex] = useState(0);
+  const [imageIndex, setImageIndex] = useState(preferredImageIndex);
   /* =====================================================
      IMAGE
   ===================================================== */
@@ -31,7 +32,10 @@ function ProductCard({
     ...getImageUrls(product?.image_url),
     ...getImageUrls(product?.image_urls),
     ...getImageUrls(product?.images),
-  ])];
+    ...getImageUrls(product?.hi_res),
+    ...getImageUrls(product?.large),
+    ...getImageUrls(product?.medium),
+  ])].filter((url) => !/\._(?:SX\d+_SY\d+|SS\d+)_/i.test(url));
   const imageUrl = imageUrls[imageIndex];
 
 
@@ -199,9 +203,7 @@ function ProductCard({
             }
             className="product-image"
             loading="lazy"
-            onError={
-              handleImageError
-            }
+            onError={handleImageError}
           />
         ) : (
           <div className="image-placeholder product-art-fallback">

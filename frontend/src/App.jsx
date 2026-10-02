@@ -10,7 +10,6 @@ import "./App.theme.css";
 import "./App.myntra.css";
 import SearchBar from "./components/SearchBar";
 import ProductGrid from "./components/ProductGrid";
-import PersonalizedRecommendations from "./components/PersonalizedRecommendations";
 
 import {
   getRecommendations,
@@ -111,7 +110,6 @@ function App() {
 
   const [query, setQuery] =
     useState("black running shoes");
-  const [lastSearchQuery, setLastSearchQuery] = useState("");
 
   const [products, setProducts] =
     useState([]);
@@ -119,7 +117,6 @@ function App() {
   const [catalog, setCatalog] = useState([]);
   const [catalogLoading, setCatalogLoading] = useState(true);
   const [catalogLimit, setCatalogLimit] = useState(12);
-  const [activityVersion, setActivityVersion] = useState(0);
 
   const [loading, setLoading] =
     useState(false);
@@ -165,6 +162,7 @@ function App() {
 
   const [showFilters, setShowFilters] =
     useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
 
   /* =======================================================
@@ -363,9 +361,7 @@ function App() {
     }
 
     setQuery(searchQuery);
-    setLastSearchQuery(searchQuery);
-    void trackActivity({ type: "search", query: searchQuery, category: searchOptions.category ?? selectedCategory })
-      .then(() => setActivityVersion((version) => version + 1));
+    void trackActivity({ type: "search", query: searchQuery, category: searchOptions.category ?? selectedCategory });
 
     setLoading(true);
 
@@ -685,7 +681,17 @@ function App() {
       }
 
 
-      return result;
+      const seenListings = new Set();
+      return result.filter((product) => {
+        const title = String(product.title || "").trim().toLowerCase();
+        const store = String(product.brand || product.store || "").trim().toLowerCase();
+        const category = String(product.category || product.main_category || "").trim().toLowerCase();
+        const image = String(product.image_url || "").trim().toLowerCase();
+        const listingKey = [title, store, category, image].join("|");
+        if (!title || seenListings.has(listingKey)) return false;
+        seenListings.add(listingKey);
+        return true;
+      });
 
     }, [
       products,
@@ -748,8 +754,7 @@ function App() {
     product
   ) => {
     const isCurrentlyWishlisted = wishlist.some((item) => item.product_id === product.product_id);
-    void trackActivity({ type: isCurrentlyWishlisted ? "wishlist_remove" : "wishlist", product })
-      .then(() => setActivityVersion((version) => version + 1));
+    void trackActivity({ type: isCurrentlyWishlisted ? "wishlist_remove" : "wishlist", product });
 
     setWishlist(
       (current) => {
@@ -800,8 +805,7 @@ function App() {
   const handleAddToBag = (
     product
   ) => {
-    void trackActivity({ type: "cart", product })
-      .then(() => setActivityVersion((version) => version + 1));
+    void trackActivity({ type: "cart", product });
 
     setBag(
       (current) => {
@@ -867,8 +871,7 @@ function App() {
   ) => {
     const removedProduct = bag.find((item) => item.product_id === productId);
     if (removedProduct) {
-      void trackActivity({ type: "cart_remove", product: removedProduct })
-        .then(() => setActivityVersion((version) => version + 1));
+      void trackActivity({ type: "cart_remove", product: removedProduct });
     }
 
     setBag(
@@ -902,8 +905,7 @@ function App() {
   ) => {
     const changedProduct = bag.find((item) => item.product_id === productId);
     if (changedProduct) {
-      void trackActivity({ type: change > 0 ? "cart" : "cart_remove", product: changedProduct })
-        .then(() => setActivityVersion((version) => version + 1));
+      void trackActivity({ type: change > 0 ? "cart" : "cart_remove", product: changedProduct });
     }
 
     setBag(
@@ -1064,8 +1066,7 @@ function App() {
   const handleViewDetails = (
     product
   ) => {
-    void trackActivity({ type: "view", product })
-      .then(() => setActivityVersion((version) => version + 1));
+    void trackActivity({ type: "view", product });
     const updated = [product, ...recentlyViewed.filter((item) => item.product_id !== product.product_id)].slice(0, 12);
     setRecentlyViewed(updated);
     localStorage.setItem("recomai_recently_viewed", JSON.stringify(updated));
@@ -1208,8 +1209,7 @@ function App() {
     };
 
     bag.forEach((item) => {
-      void trackActivity({ type: "purchase", product: item })
-        .then(() => setActivityVersion((version) => version + 1));
+      void trackActivity({ type: "purchase", product: item });
     });
 
 
@@ -1314,7 +1314,7 @@ function App() {
           NAVBAR
       ===================================================== */}
 
-      <nav className="navbar">
+      <nav className={`navbar${mobileMenuOpen ? " mobile-menu-open" : ""}`}>
 
 
         <button
@@ -1338,9 +1338,13 @@ function App() {
         </button>
 
 
+        <button className="mobile-menu-toggle" aria-label={mobileMenuOpen ? "Close navigation menu" : "Open navigation menu"} aria-expanded={mobileMenuOpen} onClick={() => setMobileMenuOpen((open) => !open)}>
+          <span></span><span></span><span></span>
+        </button>
+
         <div className="navbar-links">
           {["Men", "Women", "Kids", "Beauty", "Accessories", "Gadgets", "Sale"].map((department) => (
-            <button key={department} className={department === "Sale" ? "nav-sale" : ""} onClick={() => handleDepartmentSearch(department)}>{department}</button>
+            <button key={department} className={department === "Sale" ? "nav-sale" : ""} onClick={() => { handleDepartmentSearch(department); setMobileMenuOpen(false); }}>{department}</button>
           ))}
         </div>
 
@@ -1489,19 +1493,19 @@ function App() {
 
               <span className="live-dot"></span>
 
-              YOUR PERSONAL STYLE EDIT
+              PERSONALIZED DISCOVERY, MADE SIMPLE
 
             </div>
 
 
             <h1>
 
-              Style that
+              Discover products
 
               <br />
 
               <span>
-                finds you.
+                Made for you.
               </span>
 
             </h1>
@@ -1509,7 +1513,7 @@ function App() {
 
             <p className="hero-subtitle">
 
-              Discover feel-good finds across beauty, gaming, wellness and more. Search in your own words or bring a photo — our AI does the matching.
+              Find your next favourite across fashion, beauty, tech and more. Search naturally, upload a photo, and let multimodal AI bring the right finds to you.
 
             </p>
 
@@ -1521,7 +1525,7 @@ function App() {
                 onClick={() =>
                   document
                     .getElementById(
-                      "ai-search"
+                      "catalog-edit"
                     )
                     ?.scrollIntoView({
                       behavior:
@@ -1529,7 +1533,7 @@ function App() {
                     })
                 }
               >
-                Find Products →
+                SHOP NOW
               </button>
 
 
@@ -1538,7 +1542,7 @@ function App() {
                 onClick={() =>
                   document
                     .getElementById(
-                      "categories"
+                      "ai-search"
                     )
                     ?.scrollIntoView({
                       behavior:
@@ -1546,7 +1550,7 @@ function App() {
                     })
                 }
               >
-                Browse Categories
+                AI RECOMMENDATIONS
               </button>
 
             </div>
@@ -1592,6 +1596,8 @@ function App() {
 
 
           <div className="hero-visual">
+            <img className="hero-editorial-image" src="https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&w=1200&q=85" alt="Friends exploring a fashion collection" fetchPriority="high" />
+            <div className="hero-image-shade"></div>
 
             <div className="ai-orbit orbit-one"></div>
 
@@ -1791,6 +1797,12 @@ function App() {
                 }
               >
 
+                {(() => {
+                  const categoryProduct = catalog.find((item) => item.main_category === category && getProductImageUrls(item).length);
+                  const image = categoryProduct ? getProductImageUrls(categoryProduct)[0] : "";
+                  return image ? <img className="category-image" src={image} alt="" loading="lazy" onError={(event) => { event.currentTarget.style.display = "none"; }} /> : null;
+                })()}
+
                 <div className="category-icon">
                   {String(index + 1).padStart(2, "0")}
                 </div>
@@ -1822,24 +1834,6 @@ function App() {
         </div>
 
       </section>
-
-
-      {/* =====================================================
-          PERSONALIZED DISCOVERY
-      ===================================================== */}
-
-      <PersonalizedRecommendations
-        activityVersion={activityVersion}
-        query={lastSearchQuery}
-        category={selectedCategory}
-        catalog={catalog}
-        catalogLoading={catalogLoading}
-        wishlist={wishlist}
-        bag={bag}
-        onWishlist={handleWishlist}
-        onAddToBag={handleAddToBag}
-        onViewDetails={handleViewDetails}
-      />
 
 
       {/* =====================================================
@@ -4400,6 +4394,13 @@ function App() {
             Recommendation System
           </span>
 
+        </div>
+
+        <div className="footer-links">
+          <strong>Explore</strong>
+          <button onClick={() => document.getElementById("categories")?.scrollIntoView({ behavior: "smooth" })}>Shop categories</button>
+          <button onClick={() => document.getElementById("ai-search")?.scrollIntoView({ behavior: "smooth" })}>AI-powered search</button>
+          <button onClick={() => document.getElementById("how-ai-works")?.scrollIntoView({ behavior: "smooth" })}>How it works</button>
         </div>
 
 
