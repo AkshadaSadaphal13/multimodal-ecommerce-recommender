@@ -1863,39 +1863,6 @@ function App() {
       </section>
 
 
-      {/* =====================================================
-          FULL CATALOG EDIT
-      ===================================================== */}
-
-      <section className="catalog-edit-section" id="catalog-edit">
-        <div className="catalog-edit-heading">
-          <div>
-            <span className="section-label">THE RECOMAI EDIT</span>
-            <h2>Good things, found.</h2>
-            <p>{catalogLoading ? "Loading products from your catalog…" : `${catalog.length.toLocaleString("en-IN")} products from your collection`}</p>
-          </div>
-          <div className="catalog-filter-row">
-            <select aria-label="Filter catalog by category" value={selectedCategory} onChange={(event) => setSelectedCategory(event.target.value)}>
-              <option value="">All categories</option>
-              {availableCategories.map((category) => <option key={category} value={category}>{category}</option>)}
-            </select>
-            <select aria-label="Filter catalog by brand" value={selectedBrand} onChange={(event) => setSelectedBrand(event.target.value)}>
-              <option value="">All brands</option>
-              {availableBrands.slice(0, 100).map((brand) => <option key={brand} value={brand}>{brand}</option>)}
-            </select>
-            <select aria-label="Sort products" value={sortBy} onChange={(event) => setSortBy(event.target.value)}>
-              <option value="recommendation">Featured</option><option value="rating">Top rated</option><option value="price-low">Price: low to high</option><option value="price-high">Price: high to low</option>
-            </select>
-          </div>
-        </div>
-        {catalogProducts.length ? (
-          <>
-            <ProductGrid products={catalogProducts.slice(0, catalogLimit)} wishlist={wishlist} bag={bag} onWishlist={handleWishlist} onAddToBag={handleAddToBag} onViewDetails={handleViewDetails} className="catalog-product-grid" />
-            {catalogProducts.length > catalogLimit && <button className="load-more-products" onClick={() => setCatalogLimit((limit) => limit + 12)}>LOAD MORE FINDS</button>}
-          </>
-        ) : !catalogLoading && <div className="catalog-empty">Start the FastAPI backend to load products from your local catalog.</div>}
-      </section>
-
 
       {/* =====================================================
           AI WORKS
@@ -4402,6 +4369,39 @@ function App() {
         </div>
 
       )}
+
+      {/* =====================================================
+          FULL CATALOG EDIT
+      ===================================================== */}
+
+      <section className="catalog-edit-section" id="catalog-edit">
+        <div className="catalog-edit-heading">
+          <div>
+            <span className="section-label">THE RECOMAI EDIT</span>
+            <h2>Good things, found.</h2>
+            <p>{catalogLoading ? "Loading products from your catalog…" : `${catalog.length.toLocaleString("en-IN")} products from your collection`}</p>
+          </div>
+          <div className="catalog-filter-row">
+            <select aria-label="Filter catalog by category" value={selectedCategory} onChange={(event) => setSelectedCategory(event.target.value)}>
+              <option value="">All categories</option>
+              {availableCategories.map((category) => <option key={category} value={category}>{category}</option>)}
+            </select>
+            <select aria-label="Filter catalog by brand" value={selectedBrand} onChange={(event) => setSelectedBrand(event.target.value)}>
+              <option value="">All brands</option>
+              {availableBrands.slice(0, 100).map((brand) => <option key={brand} value={brand}>{brand}</option>)}
+            </select>
+            <select aria-label="Sort products" value={sortBy} onChange={(event) => setSortBy(event.target.value)}>
+              <option value="recommendation">Featured</option><option value="rating">Top rated</option><option value="price-low">Price: low to high</option><option value="price-high">Price: high to low</option>
+            </select>
+          </div>
+        </div>
+        {catalogProducts.length ? (
+          <>
+            <ProductGrid products={catalogProducts.slice(0, catalogLimit)} wishlist={wishlist} bag={bag} onWishlist={handleWishlist} onAddToBag={handleAddToBag} onViewDetails={handleViewDetails} className="catalog-product-grid" />
+            {catalogProducts.length > catalogLimit && <button className="load-more-products" onClick={() => setCatalogLimit((limit) => limit + 12)}>LOAD MORE FINDS</button>}
+          </>
+        ) : !catalogLoading && <div className="catalog-empty">Start the FastAPI backend to load products from your local catalog.</div>}
+      </section>
 
 
       {/* =====================================================
