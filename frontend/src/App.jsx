@@ -16,8 +16,10 @@ import {
   getImageRecommendations,
   getMultimodalRecommendations,
   getProducts,
+  createUser as createBackendUser,
 } from "./services/api";
 import { trackActivity } from "./services/userHistory";
+import { getUserId, setUserId } from "./utils/userSession";
 
 
 /* =========================================================
@@ -44,8 +46,35 @@ function getProductImageUrls(product) {
 }
 
 function getStoredUser() {
-  try { return JSON.parse(localStorage.getItem("recomai_user") || "null"); }
-  catch { return null; }
+  try {
+    const user = JSON.parse(localStorage.getItem("recomai_user") || "null");
+    if (user?.email && user?.name) {
+      const profileKey = accountProfileKey(user.email);
+      if (!localStorage.getItem(profileKey)) {
+        localStorage.setItem(profileKey, JSON.stringify(user));
+      }
+    }
+    return user;
+  } catch { return null; }
+}
+
+function accountProfileKey(email) {
+  return `recomai_profile:${encodeURIComponent(String(email || "").trim().toLowerCase())}`;
+}
+
+function readAccountProfile(email) {
+  try {
+    return JSON.parse(localStorage.getItem(accountProfileKey(email)) || "null");
+  } catch { return null; }
+}
+
+function formatEmailName(email) {
+  const localPart = String(email || "").split("@")[0];
+  return localPart
+    .split(/[._-]+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ") || "Shopper";
 }
 
 function accountStorageKey(key, account = getStoredUser()) {
@@ -957,7 +986,7 @@ function App() {
      LOGIN / SIGNUP
   ======================================================= */
 
-  const handleAuthSubmit = (
+  const handleAuthSubmit = async (
     event
   ) => {
 
@@ -990,32 +1019,46 @@ function App() {
     }
 
 
+    const email = authData.email.trim().toLowerCase();
+    const savedProfile = readAccountProfile(email);
+    const activeProfile = getStoredUser();
+    const rememberedName = savedProfile?.name ||
+      (activeProfile?.email?.trim().toLowerCase() === email ? activeProfile.name : "");
     const newUser = {
-
-      name:
-        authMode === "signup"
-          ? authData.name
-          : authData.email
-              .split("@")[0],
-
-      email:
-        authData.email,
-
+      name: authMode === "signup" ? authData.name.trim() : rememberedName || formatEmailName(email),
+      email,
     };
 
+    // Keep the app profile linked to its SQLite personalization user, and
+    // sync its visible name/email so both remain attached to the same ID.
+    let backendUserId = savedProfile?.backendUserId || "";
+    try {
+      const backendUser = await createBackendUser(newUser.name, email, backendUserId || null);
+      backendUserId = backendUser?.user_id || "";
+      if (!backendUserId) throw new Error("The API did not return a user ID.");
+    } catch (error) {
+      console.error("Could not create or load the personalization profile:", error);
+      alert("Your account could not be connected to the recommendation service. Please check that the backend is running and try again.");
+      return;
+    }
 
-    setUser(newUser);
+    const linkedUser = { ...newUser, backendUserId };
+    if (getUserId() !== backendUserId) setUserId(backendUserId);
 
-    setWishlist(readAccountData("recomai_wishlist", newUser));
-    setBag(readAccountData("recomai_bag", newUser));
-    setOrders(readAccountData("recomai_orders", newUser));
-    setRecentlyViewed(readAccountData("recomai_recently_viewed", newUser));
+
+    setUser(linkedUser);
+
+    setWishlist(readAccountData("recomai_wishlist", linkedUser));
+    setBag(readAccountData("recomai_bag", linkedUser));
+    setOrders(readAccountData("recomai_orders", linkedUser));
+    setRecentlyViewed(readAccountData("recomai_recently_viewed", linkedUser));
 
 
     localStorage.setItem(
       "recomai_user",
-      JSON.stringify(newUser)
+      JSON.stringify(linkedUser)
     );
+    localStorage.setItem(accountProfileKey(email), JSON.stringify(linkedUser));
 
 
     setShowAuth(false);
@@ -1034,6 +1077,10 @@ function App() {
   ======================================================= */
 
   const handleLogout = () => {
+
+    if (user?.email && user?.name) {
+      localStorage.setItem(accountProfileKey(user.email), JSON.stringify(user));
+    }
 
     setUser(null);
     setWishlist([]);

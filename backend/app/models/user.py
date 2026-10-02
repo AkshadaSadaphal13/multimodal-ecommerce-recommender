@@ -24,6 +24,10 @@ class User(Base):
         default=lambda: f"user_{uuid4().hex[:12]}"
     )
 
+    name: Mapped[str | None] = mapped_column(String(120), nullable=True)
+
+    email: Mapped[str | None] = mapped_column(String(255), nullable=True)
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime,
         default=datetime.utcnow

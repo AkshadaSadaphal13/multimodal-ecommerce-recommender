@@ -57,6 +57,23 @@ def init_db():
     # Keep existing history while adding the optional client event ID used
     # to make localStorage-to-backend synchronization idempotent.
     if DATABASE_URL.startswith("sqlite"):
+        user_columns = {
+            column["name"] for column in inspect(engine).get_columns("users")
+        }
+        with engine.begin() as connection:
+            if "name" not in user_columns:
+                connection.exec_driver_sql(
+                    "ALTER TABLE users ADD COLUMN name VARCHAR(120)"
+                )
+            if "email" not in user_columns:
+                connection.exec_driver_sql(
+                    "ALTER TABLE users ADD COLUMN email VARCHAR(255)"
+                )
+            connection.exec_driver_sql(
+                "CREATE UNIQUE INDEX IF NOT EXISTS uq_users_email "
+                "ON users (email) WHERE email IS NOT NULL"
+            )
+
         columns = {
             column["name"]
             for column in inspect(engine).get_columns("user_history")

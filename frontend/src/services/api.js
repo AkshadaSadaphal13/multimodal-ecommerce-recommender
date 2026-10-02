@@ -315,7 +315,7 @@ export async function getProducts(limit = 2500) {
 // CREATE USER
 // ============================================================
 
-export async function createUser() {
+export async function createUser(name = null, email = null, userId = null) {
   const response = await fetch(
     `${API_BASE_URL}/api/users`,
     {
@@ -326,7 +326,7 @@ export async function createUser() {
           "application/json",
       },
 
-      body: JSON.stringify({}),
+      body: JSON.stringify({ name, email, user_id: userId }),
     }
   );
 

@@ -4,11 +4,15 @@ from pydantic import BaseModel, ConfigDict, Field
 
 
 class UserCreate(BaseModel):
-    pass
+    user_id: str | None = Field(default=None, min_length=1, max_length=100)
+    name: str | None = Field(default=None, min_length=1, max_length=120)
+    email: str | None = Field(default=None, min_length=3, max_length=255)
 
 
 class UserResponse(BaseModel):
     user_id: str
+    name: str | None = None
+    email: str | None = None
     created_at: datetime
     is_new_user: bool
 

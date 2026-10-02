@@ -48,9 +48,25 @@ def create_user(
     user_data: UserCreate,
     db: Session = Depends(get_db)
 ):
-    user = User()
+    email = user_data.email.strip().lower() if user_data.email else None
+    user = (
+        db.query(User).filter(User.user_id == user_data.user_id).first()
+        if user_data.user_id
+        else None
+    )
+    if user is None and email:
+        user = db.query(User).filter(User.email == email).first()
 
-    db.add(user)
+    if user:
+        if user_data.name:
+            user.name = user_data.name.strip()
+    else:
+        user = User(
+            name=user_data.name.strip() if user_data.name else None,
+            email=email,
+        )
+        db.add(user)
+
     db.commit()
     db.refresh(user)
 
