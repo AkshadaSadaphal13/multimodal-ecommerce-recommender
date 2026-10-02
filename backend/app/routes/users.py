@@ -54,12 +54,15 @@ def create_user(
         if user_data.user_id
         else None
     )
-    if user is None and email:
-        user = db.query(User).filter(User.email == email).first()
+    email_user = db.query(User).filter(User.email == email).first() if email else None
+    if email_user and (user is None or email_user.user_id != user.user_id):
+        user = email_user
 
     if user:
         if user_data.name:
             user.name = user_data.name.strip()
+        if email:
+            user.email = email
     else:
         user = User(
             name=user_data.name.strip() if user_data.name else None,
