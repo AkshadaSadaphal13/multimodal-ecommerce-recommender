@@ -10,14 +10,16 @@ services:
     ports:
       - "8000:8000"
 
+    environment:
+      PYTHONUNBUFFERED: "1"
+      DATABASE_URL: sqlite:////app/data/user_history.db
+
     volumes:
+      - ./data/user_history.db:/app/data/user_history.db
       - ./data/processed:/app/data/processed:ro
       - ./data/embeddings:/app/data/embeddings:ro
       - ./index:/app/index:ro
       - ./models:/app/models:ro
-
-    environment:
-      PYTHONUNBUFFERED: "1"
 
     restart: unless-stopped
 

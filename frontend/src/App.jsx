@@ -43,6 +43,44 @@ function getProductImageUrls(product) {
   return [...new Set([collect(product?.image_url), collect(product?.image_urls), collect(product?.images)].flat())];
 }
 
+function getStoredUser() {
+  try { return JSON.parse(localStorage.getItem("recomai_user") || "null"); }
+  catch { return null; }
+}
+
+function accountStorageKey(key, account = getStoredUser()) {
+  const identity = String(account?.email || "guest").trim().toLowerCase();
+  return `${key}:${encodeURIComponent(identity || "guest")}`;
+}
+
+function readAccountData(key, account = getStoredUser()) {
+  const scopedKey = accountStorageKey(key, account);
+  let saved = localStorage.getItem(scopedKey);
+
+  // Migrate old shared data to the already signed-in profile once.
+  if (saved === null && account?.email) {
+    saved = localStorage.getItem(key);
+    if (saved !== null) {
+      localStorage.setItem(scopedKey, saved);
+      localStorage.removeItem(key);
+    }
+  } else if (!account?.email) {
+    // Unowned legacy data must not be exposed to a guest session.
+    localStorage.removeItem(key);
+  }
+
+  try {
+    const data = saved ? JSON.parse(saved) : [];
+    return Array.isArray(data) ? data : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeAccountData(key, value, account) {
+  localStorage.setItem(accountStorageKey(key, account), JSON.stringify(value));
+}
+
 
 function getProductPrice(product) {
   if (
@@ -177,8 +215,7 @@ function App() {
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
 
   const [recentlyViewed, setRecentlyViewed] = useState(() => {
-    try { return JSON.parse(localStorage.getItem("recomai_recently_viewed") || "[]"); }
-    catch { return []; }
+    return readAccountData("recomai_recently_viewed");
   });
 
 
@@ -188,18 +225,7 @@ function App() {
 
   const [wishlist, setWishlist] =
     useState(() => {
-      try {
-        const saved =
-          localStorage.getItem(
-            "recomai_wishlist"
-          );
-
-        return saved
-          ? JSON.parse(saved)
-          : [];
-      } catch {
-        return [];
-      }
+      return readAccountData("recomai_wishlist");
     });
 
 
@@ -209,18 +235,7 @@ function App() {
 
   const [bag, setBag] =
     useState(() => {
-      try {
-        const saved =
-          localStorage.getItem(
-            "recomai_bag"
-          );
-
-        return saved
-          ? JSON.parse(saved)
-          : [];
-      } catch {
-        return [];
-      }
+      return readAccountData("recomai_bag");
     });
 
 
@@ -230,18 +245,7 @@ function App() {
 
   const [user, setUser] =
     useState(() => {
-      try {
-        const saved =
-          localStorage.getItem(
-            "recomai_user"
-          );
-
-        return saved
-          ? JSON.parse(saved)
-          : null;
-      } catch {
-        return null;
-      }
+      return getStoredUser();
     });
 
 
@@ -251,18 +255,7 @@ function App() {
 
   const [orders, setOrders] =
     useState(() => {
-      try {
-        const saved =
-          localStorage.getItem(
-            "recomai_orders"
-          );
-
-        return saved
-          ? JSON.parse(saved)
-          : [];
-      } catch {
-        return [];
-      }
+      return readAccountData("recomai_orders");
     });
 
 
@@ -786,10 +779,7 @@ function App() {
 
         }
 
-        localStorage.setItem(
-          "recomai_wishlist",
-          JSON.stringify(updated)
-        );
+        writeAccountData("recomai_wishlist", updated, user);
 
         return updated;
 
@@ -849,10 +839,7 @@ function App() {
 
         }
 
-        localStorage.setItem(
-          "recomai_bag",
-          JSON.stringify(updated)
-        );
+        writeAccountData("recomai_bag", updated, user);
 
         return updated;
       }
@@ -884,10 +871,7 @@ function App() {
               productId
           );
 
-        localStorage.setItem(
-          "recomai_bag",
-          JSON.stringify(updated)
-        );
+        writeAccountData("recomai_bag", updated, user);
 
         return updated;
       }
@@ -939,10 +923,7 @@ function App() {
               }
             );
 
-        localStorage.setItem(
-          "recomai_bag",
-          JSON.stringify(updated)
-        );
+        writeAccountData("recomai_bag", updated, user);
 
         return updated;
       }
@@ -1025,6 +1006,11 @@ function App() {
 
     setUser(newUser);
 
+    setWishlist(readAccountData("recomai_wishlist", newUser));
+    setBag(readAccountData("recomai_bag", newUser));
+    setOrders(readAccountData("recomai_orders", newUser));
+    setRecentlyViewed(readAccountData("recomai_recently_viewed", newUser));
+
 
     localStorage.setItem(
       "recomai_user",
@@ -1050,6 +1036,10 @@ function App() {
   const handleLogout = () => {
 
     setUser(null);
+    setWishlist([]);
+    setBag([]);
+    setOrders([]);
+    setRecentlyViewed([]);
 
     localStorage.removeItem(
       "recomai_user"
@@ -1069,7 +1059,7 @@ function App() {
     void trackActivity({ type: "view", product });
     const updated = [product, ...recentlyViewed.filter((item) => item.product_id !== product.product_id)].slice(0, 12);
     setRecentlyViewed(updated);
-    localStorage.setItem("recomai_recently_viewed", JSON.stringify(updated));
+    writeAccountData("recomai_recently_viewed", updated, user);
     setSelectedImageIndex(0);
     setSelectedProduct(product);
   };
@@ -1224,12 +1214,7 @@ function App() {
     );
 
 
-    localStorage.setItem(
-      "recomai_orders",
-      JSON.stringify(
-        updatedOrders
-      )
-    );
+    writeAccountData("recomai_orders", updatedOrders, user);
 
 
     setLastOrder(
@@ -1244,10 +1229,7 @@ function App() {
 
     setBag([]);
 
-    localStorage.setItem(
-      "recomai_bag",
-      JSON.stringify([])
-    );
+    writeAccountData("recomai_bag", [], user);
 
   };
 
@@ -1293,9 +1275,7 @@ function App() {
 
     setOrders([]);
 
-    localStorage.removeItem(
-      "recomai_orders"
-    );
+    writeAccountData("recomai_orders", [], user);
   };
 
 
